@@ -1,8 +1,9 @@
-"""AeroForge Main Entry Point - Full Agent Pipeline"""
+"""AeroForge Main Entry Point - Full Agent Pipeline with Crash Recovery"""
 
 import json
 import sys
 import time
+import asyncio
 from pathlib import Path
 
 # Add project root to path
@@ -13,6 +14,7 @@ from agent.mission_agent import MissionAnalyst, get_environment_status, run_base
 from agent.architect_agent import AutonomyArchitect
 from agent.experiment_agent import ExperimentEngineer
 from agent.verifier_agent import VerifierAgent
+from agent.crash_analyzer import AutoCrashRecovery, run_with_crash_recovery
 from agent.schemas import (
     MissionSpec, EnvironmentStatus, ExperimentSpec, Metrics, 
     LearningState, StrategyType
@@ -35,6 +37,7 @@ def main():
     architect = AutonomyArchitect()
     engineer = ExperimentEngineer()
     verifier = VerifierAgent()
+    crash_recovery = AutoCrashRecovery()
     
     # ============================================
     # STEP 1: Mission Analyst - NL → MissionSpec
@@ -94,48 +97,65 @@ def main():
           f"time={experiment_spec.reward_config['time_penalty']:.2f}")
     
     # ============================================
-    # STEP 4: Experiment Engineer - Run Experiment Cycle
+    # STEP 4: Experiment Engineer - Run Experiment Cycle with Crash Recovery
     # ============================================
-    print("\n🔬 Step 4: Experiment Engineer running experiment cycle...")
+    print("\n🔬 Step 4: Experiment Engineer running experiment cycle with crash recovery...")
     print(f"   Max iterations: 10")
     
     # Initialize learning state
     learning_state = LearningState(mission_id=mission.mission_id)
     
-    # Run experiment cycle
+    # Run experiment cycle with crash recovery
     start_time = time.time()
-    final_learning_state = engineer.run_experiment_cycle(
-        mission, experiment_spec, env, learning_state
-    )
+    
+    # Run with crash recovery
+    crash_results = asyncio.run(run_with_crash_recovery(
+        mission, experiment_spec, env, api_key=None
+    ))
+    
     cycle_time = time.time() - start_time
     
     print(f"\n⏱️  Experiment cycle completed in {cycle_time:.1f}s")
-    print(f"   Total experiments: {final_learning_state.total_experiments}")
-    print(f"   Total training time: {final_learning_state.total_training_time_s:.1f}s")
     
-    if final_learning_state.best_metrics:
-        best = final_learning_state.best_metrics
+    if crash_results["recovered"]:
+        print(f"✅ Crash recovery successful!")
+        print(f"   Attempts: {len(crash_results['attempts'])}")
+        final_metrics = crash_results["final_metrics"]
+    else:
+        print(f"❌ Crash recovery failed after {len(crash_results['attempts'])} attempts")
+        # Fallback to regular experiment cycle
+        learning_state = LearningState(mission_id=mission.mission_id)
+        start_time = time.time()
+        final_learning_state = engineer.run_experiment_cycle(
+            mission, experiment_spec, env, learning_state
+        )
+        cycle_time = time.time() - start_time
+        final_metrics = final_learning_state.best_metrics
+    
+    print(f"\n⏱️  Experiment cycle completed in {cycle_time:.1f}s")
+    
+    if final_metrics:
         print(f"\n🏆 Best Result:")
-        print(f"   Success: {'✅' if best.success else '❌'}")
-        print(f"   Collisions: {best.collision_count}")
-        print(f"   Goal Error: {best.goal_error_m:.2f}m")
-        print(f"   Min Clearance: {best.minimum_clearance_m:.2f}m")
-        print(f"   Mean Clearance: {best.mean_clearance_m:.2f}m")
-        print(f"   Path Length: {best.path_length_m:.2f}m")
-        print(f"   Flight Time: {best.flight_time_s:.1f}s")
-        print(f"   Smoothness: {best.smoothness_score:.2f}")
-        print(f"   Energy: {best.energy_consumption:.1f}")
+        print(f"   Success: {'✅' if final_metrics.success else '❌'}")
+        print(f"   Collisions: {final_metrics.collision_count}")
+        print(f"   Goal Error: {final_metrics.goal_error_m:.2f}m")
+        print(f"   Min Clearance: {final_metrics.minimum_clearance_m:.2f}m")
+        print(f"   Mean Clearance: {final_metrics.mean_clearance_m:.2f}m")
+        print(f"   Path Length: {final_metrics.path_length_m:.2f}m")
+        print(f"   Flight Time: {final_metrics.flight_time_s:.1f}s")
+        print(f"   Smoothness: {final_metrics.smoothness_score:.2f}")
+        print(f"   Energy: {final_metrics.energy_consumption:.1f}")
     
     # ============================================
     # STEP 5: Verifier Agent - Independent Validation
     # ============================================
     print("\n🔍 Step 5: Verifier Agent validating results...")
     verification = None
-    if final_learning_state.best_metrics:
+    if final_metrics:
         verification = verifier.verify(
             mission, 
             experiment_spec, 
-            final_learning_state.best_metrics
+            final_metrics
         )
         print(f"   Passed: {'✅' if verification.passed else '❌'}")
         print(f"   Confidence: {verification.confidence:.0%}")
@@ -169,7 +189,7 @@ def main():
     print(f"   Energy: {final_metrics['energy_consumption']}")
     
     # ============================================
-    # STEP 7: Save Complete Record
+    # STEP 6: Save Complete Record
     # ============================================
     record = {
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -177,7 +197,6 @@ def main():
         "mission_spec": mission.model_dump(),
         "environment": env.model_dump(),
         "experiment_spec": experiment_spec.model_dump(),
-        "learning_state": final_learning_state.model_dump(),
         "verification": verification.__dict__ if verification else None,
         "final_metrics": final_metrics,
         "total_time_s": time.time() - start_time,
@@ -185,14 +204,14 @@ def main():
     
     output_dir = Path("experiments/results")
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / f"mission_{mission.mission_id}_full.json"
+    output_file = Path("experiments/results") / f"mission_{mission.mission_id}_full.json"
     
     with open(output_file, "w") as f:
         json.dump(record, f, indent=2, default=str)
     
     print(f"\n💾 Complete mission record saved to {output_file}")
     
-    return 0 if final_metrics['success'] else 1
+    return 0 if final_metrics.get('success', False) else 1
 
 
 if __name__ == "__main__":
