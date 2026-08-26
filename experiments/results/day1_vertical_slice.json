@@ -1,0 +1,90 @@
+{
+  "natural_language": "Fly from (0,0,2) to (20,15,3) using camera and depth to avoid dynamic obstacles with 2.5m clearance, minimize energy and time",
+  "mission_spec": {
+    "mission_id": "mission_001",
+    "start": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 2.0
+    },
+    "goal": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 2.0
+    },
+    "waypoints": [],
+    "known_obstacles": [],
+    "map_bounds": {
+      "min": {
+        "x": -50.0,
+        "y": -50.0,
+        "z": 0.0
+      },
+      "max": {
+        "x": 50.0,
+        "y": 50.0,
+        "z": 20.0
+      }
+    },
+    "sensor_requirements": [
+      "gps",
+      "imu",
+      "camera",
+      "depth"
+    ],
+    "obstacle_avoidance": "reactive_potential_field",
+    "minimum_clearance_m": 2.0,
+    "objectives": {
+      "balanced": 1.0
+    },
+    "constraints": {
+      "max_flight_time_s": 60.0
+    },
+    "strategy_preference": null,
+    "learning_enabled": true,
+    "max_learning_iterations": 20,
+    "acceptance_criteria": {
+      "max_collisions": 0.0,
+      "max_goal_error_m": 1.0,
+      "min_clearance_m": 2.0,
+      "max_flight_time_s": 60.0
+    },
+    "human_guidance": null,
+    "ask_for_clarification": true
+  },
+  "environment": {
+    "px4_sitl_available": true,
+    "gazebo_available": true,
+    "ros2_available": true,
+    "camera_available": true,
+    "depth_camera_available": true,
+    "micro_ros_agent_running": true,
+    "px4_version": "",
+    "gazebo_version": null,
+    "ros2_distro": "jazzy",
+    "available_strategies": [],
+    "compute_available": {
+      "cpu": true,
+      "cuda": false,
+      "mps": false
+    }
+  },
+  "metrics": {
+    "success": true,
+    "collision_count": 0,
+    "goal_error_m": 0.36,
+    "minimum_clearance_m": 2.67,
+    "mean_clearance_m": 3.77,
+    "path_length_m": 21.73,
+    "flight_time_s": 10.439390182495117,
+    "smoothness_score": 0.92,
+    "energy_consumption": 67.01,
+    "experiment_id": "baseline_001",
+    "n_episodes": 1,
+    "success_rate": 1.0,
+    "std_goal_error_m": 0.14,
+    "std_clearance_m": 0.13,
+    "inference_latency_ms": null,
+    "training_time_s": null
+  }
+}

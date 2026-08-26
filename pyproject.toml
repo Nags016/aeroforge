@@ -1,0 +1,43 @@
+[project]
+name = "aeroforge"
+version = "0.1.0"
+description = "Agentic Flight Engineer for PX4 SITL"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.0",
+    "google-cloud-firestore>=2.0",
+    "google-cloud-storage>=2.0",
+    "google-generativeai>=0.3",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "requests>=2.31",
+    "aiohttp>=3.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "mypy>=1.0",
+    "ruff>=0.1",
+    "black>=23.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent*", "tools*"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
