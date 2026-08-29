@@ -1,94 +1,260 @@
 # AeroForge — The Agentic Flight Engineer
 
-> Turns natural-language drone missions into simulated, tested, and optimized autonomous flight solutions by letting a Gemini-powered agent choose the right autonomy strategy, run experiments, diagnose failures, and deploy the validated policy to PX4 SITL.
+> Turns natural-language drone missions into simulated, tested, and optimized autonomous flight solutions by letting a multi-agent system choose the right autonomy strategy, run experiments, diagnose failures, and deploy the validated policy to PX4 SITL.
 
 ## 🎯 Hackathon Project
 **Google All Things Agentic Hackathon 2026**  
 **Category:** Taskmaster (multi-step engineering workflow automation)  
-**Stack:** Gemini 3.5+ • Google ADK • Google Cloud (Cloud Run, Firestore, Cloud Storage) • PX4 SITL • Gazebo Harmonic • ROS 2 Jazzy
+**Stack:** Python 3.10+ • Rich/Textual CLI • Stable-Baselines3 (PPO/SAC) • PX4 SITL • Gazebo Harmonic • ROS 2 Jazzy
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-Natural Language Mission
-         │
-         ▼
-    ┌─────────────┐
-    │    Gemini   │  (Mission Analyst Agent)
-    │   + ADK     │
-    └──────┬──────┘
-           │ MissionSpec JSON
-           ▼
-    ┌─────────────┐
-    │  Autonomy   │  (Architect Agent)
-    │  Architect  │  → ExperimentSpec
-    └──────┬──────┘
-           │
-           ▼
-    ┌─────────────┐     ┌──────────────┐
-    │  Experiment │────▶│  PX4 SITL +  │
-    │   Agent     │     │  Gazebo      │
-    └──────┬──────┘     └──────┬───────┘
-           │                   │
-           ▼                   ▼
-    ┌─────────────┐     ┌──────────────┐
-    │ Verification│◀────│  Telemetry / │
-    │   Agent     │     │   ULog Logs  │
-    └──────┬──────┘     └──────────────┘
-           │
-           ▼
-      PASS / ITERATE / FAIL
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        AEROFORGE AGENT PIPELINE                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  Natural Language Mission                                                    │
+│           │                                                                   │
+│           ▼                                                                   │
+│  ┌─────────────────────┐                                                     │
+│  │   Mission Analyst   │  → MissionSpec (start, goal, sensors, constraints)  │
+│  │  (NL Understanding) │     + Clarifying Questions                          │
+│  └──────────┬──────────┘                                                     │
+│             │ MissionSpec                                                    │
+│             ▼                                                                 │
+│  ┌─────────────────────┐                                                     │
+│  │  Autonomy Architect │  → Strategy Selection (6 strategies)                │
+│  │  (Strategy Scoring) │     + ExperimentSpec (reward, algorithm, env)       │
+│  └──────────┬──────────┘                                                     │
+│             │ ExperimentSpec                                                 │
+│             ▼                                                                 │
+│  ┌─────────────────────┐     ┌─────────────────────┐                         │
+│  │  Experiment Engineer│────▶│  Training / Sim     │                         │
+│  │  (Iterative Cycle)  │     │  PPO/SAC/Classical  │                         │
+│  └──────────┬──────────┘     └──────────┬──────────┘                         │
+│             │ Metrics                     │                                   │
+│             ▼                             ▼                                   │
+│  ┌─────────────────────┐     ┌─────────────────────┐                         │
+│  │ Verification Agent  │◀────│  Crash Analyzer     │                         │
+│  │ (Safety Validation) │     │ (.ulg → log-analyser)│                        │
+│  └──────────┬──────────┘     └─────────────────────┘                         │
+│             │                                                                   │
+│             ▼                                                                   │
+│       PASS / ITERATE / FAIL                                                    │
+│             │                                                                   │
+│             ▼                                                                   │
+│  ┌─────────────────────┐                                                     │
+│  │   Final Execution   │  → Deploy to PX4 SITL                              │
+│  │   (Validated Policy)│     + Full Experiment Record                       │
+│  └─────────────────────┘                                                     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### 5 Specialized Agents
+
+| Agent | Role | Key Capability |
+|-------|------|----------------|
+| **Mission Analyst** | NL → MissionSpec | Parses natural language, asks clarifying questions |
+| **Autonomy Architect** | MissionSpec → ExperimentSpec | Scores 6 strategies, picks optimal approach |
+| **Experiment Engineer** | ExperimentSpec → Metrics | Iterative training/eval with bounded parameter mutation |
+| **Verifier Agent** | Metrics → PASS/FAIL | Independent safety/performance validation |
+| **Crash Analyzer** | .ulg → Fix → Re-run | Auto crash recovery via log-analyser.app |
 
 ---
 
 ## 🚀 Quickstart
 
-### Prerequisites (verified working)
-- **PX4-Autopilot v1.17.0** at `/home/mr_nags/PX4-Autopilot`
-- **Gazebo Harmonic 8.14.0** in distrobox `ubuntu24`
-- **ROS 2 Jazzy** built from source at `/home/mr_nags/ros2_jazzy`
-- **micro-ROS agent** built at `/tmp/micro-ros-agent`
-- **Python 3.12+** with virtual environment
+### Prerequisites
+- **Python 3.10+** (conda env `aeroforge`)
+- **PX4 SITL** (optional for full simulation)
+- **Gazebo Harmonic** (optional for visual sim)
+- **NVIDIA GPU** (GTX 1650 4GB works for training)
+- **ROS 2 Jazzy** (optional)
 
-### 1. Start the Simulation Stack
-
-**Terminal 1 - micro-ROS Agent (ROS 2 bridge):**
+### 1. Install & Run CLI
 ```bash
-distrobox enter ubuntu24 -- bash -c "
-  . /opt/ros/jazzy/setup.bash
-  export LD_LIBRARY_PATH=/tmp/micro-ros-agent/install/micro_ros_agent/lib:\$LD_LIBRARY_PATH
-  /tmp/micro-ros-agent/install/micro_ros_agent/lib/micro_ros_agent/micro_ros_agent udp4 -p 8888 -v 4
-"
+# Already set up! Just run:
+aeroforge "Fly from (0,0,2) to (10,10,2) avoiding obstacles"
 ```
 
-**Terminal 2 - PX4 SITL + Gazebo (headless):**
+### 2. Interactive Mode
 ```bash
-distrobox enter ubuntu24 -- bash -c "
-  pkill -9 -f 'px4\|gz sim' 2>/dev/null; sleep 2
-  . /home/mr_nags/ros2_jazzy/install/setup.bash
-  cd /home/mr_nags/PX4-Autopilot
-  HEADLESS=1 make px4_sitl gz_x500
-"
+aeroforge --interactive
 ```
 
-**Terminal 3 - Verify ROS 2 topics:**
+### 3. Train RL Policy (runs on GPU)
 ```bash
-distrobox enter ubuntu24 -- bash -c "
-  . /home/mr_nags/ros2_jazzy/install/setup.bash
-  ros2 topic list | grep fmu
-  # Should show: /fmu/out/vehicle_local_position, /fmu/out/vehicle_attitude, etc.
-"
+# Train PPO for 1M steps (~2-3 hours on GTX 1650)
+python train_rl.py --algorithm ppo --timesteps 1000000
+
+# Train SAC for 500K steps
+python train_rl.py --algorithm sac --timesteps 500000
 ```
 
-### 2. Run AeroForge Agent (after setup)
+### 4. Run Terminal Visualization Demo
 ```bash
-cd /home/mr_nags/aeroforge
-source .venv/bin/activate
-python -m agent.main "Fly from A to B using camera to avoid obstacles"
+python terminal_sim.py
 ```
+
+---
+
+## 🎮 CLI Features (Beautiful Terminal UI)
+
+```
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  █████╗ ██████╗ ██████╗ ██████╗ ██╗  ██╗██╗███╗   ██╗██████╗  ██████╗ ██████╗ ║
+║  ...                                                                    ║
+║        Agentic Flight Engineer  •  Autonomous Drone Missions  •  v1.0.0     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+━━━ Step 1: Mission Analyst - Parsing Natural Language ━━━
+  ℹ️  Mission ID: mission_001
+  ℹ️  Start: (0.0, 0.0, 2.0)
+  ℹ️  Goal: (10.0, 10.0, 2.0)
+  ℹ️  Sensors: ['gps', 'imu']
+  ℹ️  Obstacle Avoidance: reactive_potential_field
+  ℹ️  Min Clearance: 2.0m
+
+━━━ Step 2: Environment Status Check ━━━
+           🔍 Environment Status            
+╭─────────────────┬──────────────┬─────────╮
+│ Component       │ Status       │ Details │
+├─────────────────┼──────────────┼─────────┤
+│ PX4 SITL        │ ✅ Available │ unknown │
+│ Gazebo          │ ✅ Available │ unknown │
+│ ROS 2           │ ✅ Available │ jazzy   │
+│ Camera          │ ✅ Available │         │
+│ Depth Camera    │ ✅ Available │         │
+│ micro-ROS Agent │ ✅ Running   │         │
+│ Compute - CPU   │ ✅           │         │
+│ Compute - CUDA  │ ✅           │         │
+│ Compute - MPS   │ ❌           │         │
+╰─────────────────┴──────────────┴─────────╯
+
+━━━ Step 3: Autonomy Architect - Strategy Selection ━━━
+          🧠 Strategy Selection          
+╭───────────────────┬───────────────────╮
+│ Property          │ Value             │
+├───────────────────┼───────────────────┤
+│ Selected Strategy │ classical_mpc     │
+│ Control Level     │ offboard_velocity │
+│ Algorithm         │ MPC               │
+│ Episodes          │ 1                 │
+╰───────────────────┴───────────────────╯
+
+━━━ Step 4: Experiment Engineer - Running Experiment Cycle ━━━
+🔄 Iteration 1/20
+   Metrics: success=True, collisions=0, goal_error=0.21m, clearance=1.96m
+   Result: ✅ PASS - All thresholds met
+✅ Experiment PASSED on iteration 1!
+
+━━━ Step 5: Verifier Agent - Independent Validation ━━━
+╭─────────────────────────── 🔍 Verification Result ───────────────────────────╮
+│ Passed: ✅ PASSED                                                            │
+│ Confidence: 100%                                                             │
+│ Score: 0.97                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+━━━ Step 6: Final Mission Execution ━━━
+      📊 Final Mission Results       
+╭────────────────┬────────┬─────────╮
+│ Metric         │ Value  │ Status  │
+├────────────────┼────────┼─────────┤
+│ Success        │ ✅     │ ✅ PASS │
+│ Collisions     │ 0      │ ✅      │
+│ Goal Error     │ 0.32m  │ ✅      │
+│ Min Clearance  │ 2.85m  │ ✅      │
+│ Path Length    │ 22.56m │         │
+│ Flight Time    │ 10.4s  │         │
+│ Energy         │ 64.6   │         │
+╰────────────────┴────────┴─────────╯
+```
+
+---
+
+## 🧠 6 Autonomy Strategies
+
+| Strategy | Type | Best For | Key Features |
+|----------|------|----------|--------------|
+| `classical_mpc` | Classical | Precision waypoint, known env | MPC control, fast, deterministic |
+| `classical_rrt` | Classical | Exploration, unknown env | RRT* planning, global path |
+| `rl_ppo` | RL | Learning from experience | PPO, on-policy, stable |
+| `rl_sac` | RL | Continuous control | SAC, off-policy, sample efficient |
+| `hybrid_mpc_rl` | Hybrid | Known + unknown mix | MPC planning + RL adaptation |
+| `hybrid_rrt_rl` | Hybrid | Complex dynamic env | RRT* global + RL local |
+
+---
+
+## 📊 Experiment Output
+
+Every mission produces a complete JSON record:
+```json
+{
+  "timestamp": "2026-08-29 23:45:12",
+  "natural_language": "Fly from (0,0,2) to (10,10,2) avoiding obstacles",
+  "mission_spec": {...},
+  "environment": {...},
+  "experiment_spec": {...},
+  "verification": {...},
+  "final_metrics": {
+    "success": true,
+    "collision_count": 0,
+    "goal_error_m": 0.32,
+    "minimum_clearance_m": 2.85,
+    "path_length_m": 22.56,
+    "flight_time_s": 10.4,
+    "smoothness_score": 0.87,
+    "energy_consumption": 64.6
+  },
+  "total_time_s": 4.2
+}
+```
+Saved to: `experiments/results/mission_mission_001_full.json`
+
+---
+
+## 🤖 RL Training Details
+
+### Environment (36-dim obs, 3-dim action)
+```
+Observation:
+├── Position (3)
+├── Velocity (3)  
+├── Quaternion (4)
+├── Goal Relative (3)
+├── 16-Ray Depth (16) - simulated lidar
+├── Previous Action (3)
+├── Time Left (1)
+└── Obstacle Info (4)
+
+Action: [vx, vy, vz] normalized [-1, 1] → scaled to max 10 m/s
+```
+
+### Reward Function
+```python
+reward = (
+    goal_reward * reached_goal
+    + goal_distance_weight * distance_to_goal
+    + clearance_reward_weight * max(0, clearance - threshold)
+    + collision_penalty * collision
+    + time_penalty * dt
+    + action_smoothness_weight * |action - prev_action|
+)
+```
+
+### Training Config (PPO)
+- **Steps:** 1,000,000
+- **Parallel envs:** 4
+- **LR:** 3e-4
+- **Batch:** 256
+- **Epochs:** 10
+- **Device:** CUDA (GTX 1650)
+- **Checkpoints:** Every 50K steps
+- **Eval:** Every 25K steps (10 episodes)
 
 ---
 
@@ -96,103 +262,69 @@ python -m agent.main "Fly from A to B using camera to avoid obstacles"
 
 ```
 aeroforge/
-├── README.md                 # This file
-├── AGENT_CONTEXT.md          # Master context for coding agents
+├── aeroforge_cli.py          # Beautiful Rich-based CLI
+├── terminal_sim.py           # ASCII/ANSI flight visualization
+├── train_rl.py               # PPO/SAC training script
 ├── AGENTS.md                 # Agent orchestration rules
-├── .env.example              # Environment variables template
-├── .gitignore
-├── pyproject.toml            # Python package config
-├── docs/
-│   ├── architecture.md       # System architecture diagram
-│   ├── safety.md             # Safety boundaries
-│   ├── experiments.md        # Experiment tracking
-│   ├── hackathon.md          # Hackathon submission details
-│   ├── environment_baseline.md
-│   ├── baseline_flight.md
-│   ├── camera_baseline.md
-│   └── DAY1_REPORT.md
+├── AGENT_CONTEXT.md          # Master context for agents
+├── README.md                 # This file
+├── pyproject.toml
 ├── agent/
-│   ├── __init__.py
-│   ├── mission_agent.py      # Mission Analyst - NL → MissionSpec
-│   ├── architect_agent.py    # Autonomy Architect - MissionSpec → ExperimentSpec
-│   ├── experiment_agent.py   # Experiment Engineer - runs sim, trains, evaluates
-│   ├── verifier_agent.py     # Verification Agent - validates results
-│   └── schemas.py            # Pydantic models (MissionSpec, ExperimentSpec, Metrics)
+│   ├── main.py               # Original pipeline entry
+│   ├── mission_agent.py      # Mission Analyst
+│   ├── architect_agent.py    # Autonomy Architect
+│   ├── experiment_agent.py   # Experiment Engineer (with RL eval)
+│   ├── verifier_agent.py     # Verification Agent
+│   ├── crash_analyzer.py     # Crash recovery
+│   ├── schemas.py            # Pydantic models
+│   └── __init__.py
 ├── tools/
-│   ├── __init__.py
-│   ├── simulation.py         # start(), stop(), run_episode(), capture_camera()
-│   ├── px4.py                # sitl_status(), deploy_to_sitl()
-│   ├── gazebo.py             # create_scenario(), world management
-│   ├── telemetry.py          # get_telemetry(), parse_ulog()
-│   ├── camera.py             # get_camera_frame(), depth_from_camera()
-│   ├── training.py           # start_training(), get_training_status()
-│   └── evaluation.py         # compute_metrics(), compare_policies()
+│   ├── simulation.py
+│   ├── px4.py
+│   ├── gazebo.py
+│   └── ...
 ├── simulation/
-│   ├── worlds/               # Gazebo world files
-│   ├── configs/              # Simulation configs
-│   └── scenarios/            # Mission scenarios (obstacles, start/goal)
+│   ├── worlds/
+│   └── scenarios/
 ├── experiments/
-│   ├── configs/              # Experiment configurations
-│   ├── results/              # Metrics JSONL
-│   └── artifacts/            # Policies, logs, models
-├── tests/
-│   ├── unit/
-│   └── integration/
-└── infra/
-    └── cloud-run/            # Cloud Run deployment configs
+│   ├── results/              # JSON records
+│   └── configs/
+├── models/
+│   ├── checkpoints/          # Training checkpoints
+│   └── best/                 # Best eval models
+├── logs/
+│   ├── tensorboard/
+│   └── eval/
+└── tests/
+    └── test_schemas.py
 ```
-
----
-
-## 🤖 Agent Workflow (Day 1 Target)
-
-### Phase 1-3: Baseline (DONE ✅)
-- [x] Environment inspection documented
-- [x] PX4 SITL + Gazebo verified working
-- [x] Camera simulation - Gazebo camera topics available
-
-### Phase 4-5: Project + Agent Skeleton (IN PROGRESS)
-- [x] Repository structure created
-- [ ] Google ADK agent scaffold
-- [ ] MissionSpec schema defined
-- [ ] First tools: `get_environment_status()`, `run_baseline_mission()`
-
-### Phase 6-7: Vertical Slice (NEXT)
-- [ ] Natural language → MissionSpec → Baseline flight → Metrics → Explanation
-
-### Phase 8-10: Logging, Testing, Report
-- [ ] Experiment logging (JSONL)
-- [ ] Schema/tool tests
-- [ ] DAY1_REPORT.md
 
 ---
 
 ## 🛡️ Safety Rules (Non-Negotiable)
 
 1. **SITL only** - No real hardware for MVP
-2. **No arbitrary actuator commands** exposed to LLM
-3. **PX4 safety boundaries preserved** - Offboard mode requires continuous heartbeat
+2. **No arbitrary actuator commands** exposed to agents
+3. **PX4 safety boundaries preserved** - Offboard requires continuous heartbeat
 4. **Fail closed** - Agent asks for clarification when uncertain
 5. **Separate optimization from verification** - Two different agents
 6. **No PX4 source modifications** without explicit human approval
 
 ---
 
-## 📊 Metrics Schema
+## 📈 Current Status (Aug 29, 2026)
 
-Every experiment outputs:
-```json
-{
-  "success": true,
-  "collision_count": 0,
-  "goal_error_m": 0.31,
-  "minimum_clearance_m": 1.72,
-  "path_length_m": 28.4,
-  "flight_time_s": 18.2,
-  "smoothness_score": 0.87,
-  "experiment_id": "exp_003"
-}
-```
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **Core Agent Pipeline** | ✅ Complete | All 5 agents working |
+| **Beautiful CLI** | ✅ Complete | Rich/Textual, interactive mode |
+| **Terminal Visualization** | ✅ Complete | ASCII drone sim demo |
+| **Global `aeroforge` cmd** | ✅ Complete | `/home/mr_nags/.local/bin/aeroforge` |
+| **RL Training (PPO)** | 🟡 Running | 1M steps on GTX 1650 |
+| **RL Policy Integration** | ✅ Ready | Load/eval in Experiment Engineer |
+| **Full Gazebo+PX4** | ⚠️ Blocked | Distrobox driver mismatch |
+| **Documentation** | 🟡 Updating | This README |
+| **Demo Video** | ⏳ Pending | Tomorrow AM |
 
 ---
 
@@ -200,26 +332,48 @@ Every experiment outputs:
 
 ```bash
 # Run tests
-pytest tests/ -v
+cd /home/mr_nags/aeroforge && /home/mr_nags/miniconda3/envs/aeroforge/bin/python -m pytest tests/ -v
 
-# Type check
-mypy agent/ tools/
+# Run CLI demo
+aeroforge "Fly from (0,0,2) to (10,10,2) avoiding obstacles"
 
-# Format
-ruff format agent/ tools/
+# Interactive mode
+aeroforge --interactive
 
-# Lint
-ruff check agent/ tools/
+# Train RL
+python train_rl.py --algorithm ppo --timesteps 1000000
+
+# Visualization demo
+python terminal_sim.py
+
+# Check training logs
+tensorboard --logdir logs/tensorboard
 ```
 
 ---
 
 ## 📝 License
-MIT License - See LICENSE file
-
-## 🤝 Contributing
-Solo hackathon project - issues/PRs welcome for discussion
+MIT License
 
 ---
 
-*Built for Google All Things Agentic Hackathon 2026*
+## 🤝 Hackathon Submission
+
+**Built in 3 days for Google All Things Agentic Hackathon 2026**
+
+### What makes this a winner:
+1. **True Agentic System** - 5 specialized agents with clear roles, not a chatbot
+2. **Real Engineering Problem** - Drone autonomy requires control theory, perception, safety
+3. **Production-Ready CLI** - Beautiful terminal UX like Hermes/Kiro/Codex
+4. **RL + Classical Hybrid** - Best of both worlds for autonomy
+5. **Crash Recovery Pipeline** - Novel .ulg → log-analyser → auto-fix → re-run
+6. **Human-in-the-Loop** - Clarifying questions for ambiguous missions
+7. **Complete Experiment Tracking** - Every run logged, replayable, auditable
+8. **Works Offline** - Mock simulation for demo, scales to real Gazebo/PX4
+9. **Google Stack Ready** - ADK, Firestore, Cloud Storage integration scaffolded
+
+---
+
+*Deadline: Aug 30, 2026 12:00 PM IST*  
+*Team: Solo (NIRVAN)*  
+*Contact: nirvanwms@gmail.com*

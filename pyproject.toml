@@ -3,7 +3,7 @@ name = "aeroforge"
 version = "0.1.0"
 description = "Agentic Flight Engineer for PX4 SITL"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "pydantic>=2.0",
     "google-cloud-firestore>=2.0",

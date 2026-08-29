@@ -1,8 +1,8 @@
 """Autonomy Architect Agent - selects optimal strategy based on mission and environment"""
 
-from typing import Optional
+from typing import Optional, Dict, List
 from agent.schemas import (
-    MissionSpec, ExperimentSpec, EnvironmentStatus, 
+    MissionSpec, ExperimentSpec, EnvironmentStatus,
     StrategyType, ControlLevel, SensorRequirement, ObstacleAvoidancePolicy,
     LearningObjective, Vector3D
 )
