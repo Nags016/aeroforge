@@ -340,9 +340,8 @@ MIT License
 
 ---
 
-## 🤝 Hackathon Submission
+## 🤝 What's Ready
 
-### What makes this a winner:
 1. **True Agentic System** - 5 specialized agents with clear roles, not a chatbot
 2. **Real Engineering Problem** - Drone autonomy requires control theory, perception, safety
 3. **Production-Ready CLI** - Beautiful terminal UX like Hermes/Kiro/Codex
