@@ -1,0 +1,17 @@
+{
+  "algorithm": "SAC",
+  "total_timesteps": 5000000,
+  "training_time_hours": 0.5361062637964884,
+  "n_envs": 4,
+  "curriculum_levels": 5,
+  "domain_randomization": true,
+  "action_noise": "NormalActionNoise(sigma=0.1)",
+  "sde": true,
+  "policy_arch": [
+    512,
+    512,
+    256
+  ],
+  "buffer_size": 500000,
+  "batch_size": 512
+}

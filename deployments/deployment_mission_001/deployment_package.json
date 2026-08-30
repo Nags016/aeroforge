@@ -1,0 +1,193 @@
+{
+  "metadata": {
+    "mission_id": "mission_001",
+    "created_at": "2026-08-30T00:05:55.627123",
+    "mission_type": "autonomous_navigation",
+    "strategy": "classical_mpc",
+    "algorithm": "MPC"
+  },
+  "mission_spec": {
+    "mission_id": "mission_001",
+    "start": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 2.0
+    },
+    "goal": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 2.0
+    },
+    "waypoints": [],
+    "known_obstacles": [],
+    "map_bounds": {
+      "min": {
+        "x": -50.0,
+        "y": -50.0,
+        "z": 0.0
+      },
+      "max": {
+        "x": 50.0,
+        "y": 50.0,
+        "z": 20.0
+      }
+    },
+    "sensor_requirements": [
+      "gps",
+      "imu",
+      "camera",
+      "depth"
+    ],
+    "obstacle_avoidance": "reactive_potential_field",
+    "minimum_clearance_m": 2.0,
+    "objectives": {
+      "balanced": 1.0
+    },
+    "constraints": {},
+    "strategy_preference": null,
+    "learning_enabled": true,
+    "max_learning_iterations": 20,
+    "acceptance_criteria": {
+      "max_collisions": 0.0,
+      "max_goal_error_m": 1.0,
+      "min_clearance_m": 2.0,
+      "max_flight_time_s": 60.0
+    },
+    "human_guidance": null,
+    "ask_for_clarification": true
+  },
+  "experiment_spec": {
+    "experiment_id": "exp_mission_001",
+    "mission_id": "mission_001",
+    "strategy": "classical_mpc",
+    "control_level": "offboard_velocity",
+    "observation_space": {
+      "type": "Box",
+      "shape": [
+        36
+      ],
+      "low": -Infinity,
+      "high": Infinity
+    },
+    "action_space": {
+      "type": "Box",
+      "shape": [
+        3
+      ],
+      "low": -1.0,
+      "high": 1.0
+    },
+    "algorithm": "MPC",
+    "algorithm_config": {
+      "horizon": 20,
+      "dt": 0.1,
+      "Q": [
+        10,
+        10,
+        10,
+        1,
+        1,
+        1,
+        0.1,
+        0.1,
+        0.1
+      ],
+      "R": [
+        1,
+        1,
+        1
+      ],
+      "max_velocity": 10.0,
+      "max_acceleration": 5.0
+    },
+    "reward_config": {
+      "goal_reward": 100.0,
+      "goal_distance_weight": -1.0,
+      "velocity_weight": -0.1,
+      "acceleration_weight": -0.05,
+      "collision_penalty": -50.0,
+      "clearance_reward_weight": 2.0,
+      "clearance_threshold": 2.0,
+      "time_penalty": -0.1,
+      "action_smoothness_weight": -0.01
+    },
+    "world_config": {
+      "bounds": {
+        "min": {
+          "x": -50.0,
+          "y": -50.0,
+          "z": 0.0
+        },
+        "max": {
+          "x": 50.0,
+          "y": 50.0,
+          "z": 20.0
+        }
+      },
+      "obstacles": []
+    },
+    "obstacle_config": {
+      "num_obstacles": 5,
+      "obstacle_radius_range": [
+        0.5,
+        3.0
+      ],
+      "dynamic_obstacle_ratio": 0.2
+    },
+    "n_episodes": 1,
+    "max_steps_per_episode": 500,
+    "eval_episodes": 10,
+    "eval_frequency": 10,
+    "policy_checkpoint": null,
+    "replay_buffer_path": null,
+    "training_history": [],
+    "success_thresholds": {
+      "collision_rate": 0.0,
+      "goal_reach_rate": 0.9,
+      "avg_clearance_m": 2.0,
+      "avg_flight_time_s": 60.0
+    }
+  },
+  "validation_metrics": "success=True collision_count=0 goal_error_m=0.15 minimum_clearance_m=2.1 mean_clearance_m=2.8 path_length_m=18.5 flight_time_s=12.3 smoothness_score=0.92 energy_consumption=75.2 experiment_id='exp_mission_001_iter0' n_episodes=1 success_rate=1.0 std_goal_error_m=0.05 std_clearance_m=0.1 inference_latency_ms=15.0 training_time_s=None",
+  "sitl_validation": {
+    "passed": false,
+    "iterations": 1,
+    "final_metrics": "success=True collision_count=0 goal_error_m=0.15 minimum_clearance_m=2.1 mean_clearance_m=2.8 path_length_m=18.5 flight_time_s=12.3 smoothness_score=0.92 energy_consumption=75.2 experiment_id='exp_mission_001_iter0' n_episodes=1 success_rate=1.0 std_goal_error_m=0.05 std_clearance_m=0.1 inference_latency_ms=15.0 training_time_s=None"
+  },
+  "deployment_config": {
+    "flight_controller": "Pixhawk 6C Mini",
+    "companion_computer": "Vicharak Axon",
+    "communication": "WFB-NG (5.8 GHz) + MAVLink",
+    "offboard_mode": true,
+    "failsafe": {
+      "lost_link": "RTL",
+      "low_battery": "Land",
+      "geofence": "Enabled"
+    }
+  },
+  "files": {
+    "mission_plan": "mission_plan.json",
+    "parameters": "px4_params.yaml",
+    "waypoints": "waypoints.txt",
+    "scripts": [
+      "preflight_check.sh",
+      "launch_mission.sh",
+      "emergency_land.sh"
+    ]
+  },
+  "checklist": [
+    "\u2610 Verify WFB-NG link established (RSSI > -70 dBm)",
+    "\u2610 Verify MAVLink telemetry on both ends",
+    "\u2610 Verify GPS lock (3D fix, HDOP < 1.5)",
+    "\u2610 Verify compass calibration",
+    "\u2610 Verify arming checks pass",
+    "\u2610 Verify offboard mode available",
+    "\u2610 Verify geofence configured",
+    "\u2610 Verify RTL altitude set",
+    "\u2610 Pre-flight: Remove propellers, test motors",
+    "\u2610 Pre-flight: Verify obstacle avoidance in SITL first",
+    "\u2610 Flight: Start with safety pilot in position mode",
+    "\u2610 Flight: Switch to offboard after 30s stable hover",
+    "\u2610 Post-flight: Download logs, verify mission completion"
+  ]
+}

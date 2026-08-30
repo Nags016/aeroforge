@@ -1,0 +1,1 @@
+ls -la /home/mr_nags/aeroforge/__main__.py /home/mr_nags/aeroforge/__init__.py 2>/dev/null; echo "---"; python -c "import sys; sys.path.insert(0, '/home/mr_nags/aeroforge'); import aeroforge; print('OK')" 2>&1

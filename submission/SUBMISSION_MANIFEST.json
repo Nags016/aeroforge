@@ -1,0 +1,31 @@
+{
+  "project": "AeroForge - Autonomous Flight Engineer",
+  "hackathon": "Google All Things Agentic Hackathon 2026",
+  "category": "Taskmaster",
+  "team": "NIRVAN (Solo)",
+  "contact": "nirvanwms@gmail.com",
+  "github": "https://github.com/Nags016/aeroforge",
+  "submitted_at": "2026-08-30T00:08:31.593089",
+  "components": {
+    "cli": "Beautiful Rich/Textual terminal interface",
+    "agents": 5,
+    "strategies": 6,
+    "rl_training": "PPO/SAC on GPU",
+    "simulation": "PX4 SITL + Gazebo + ROS 2",
+    "deployment": "Automated package generation"
+  },
+  "key_features": [
+    "Natural language mission parsing",
+    "5 specialized agents with clear roles",
+    "6 autonomy strategies (Classical + RL + Hybrid)",
+    "Iterative experiment loop with bounded mutations",
+    "Independent safety verification",
+    "Crash recovery pipeline",
+    "Human-in-the-loop clarifying questions",
+    "RL training on consumer GPU (GTX 1650)",
+    "Terminal-based visualization",
+    "Complete deployment package generation"
+  ],
+  "deployment_packages": 1,
+  "tests_passed": "10/10"
+}
