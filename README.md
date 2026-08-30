@@ -2,8 +2,7 @@
 
 > Turns natural-language drone missions into simulated, tested, and optimized autonomous flight solutions by letting a multi-agent system choose the right autonomy strategy, run experiments, diagnose failures, and deploy the validated policy to PX4 SITL.
 
-## 🎯 Hackathon Project
-**Google All Things Agentic Hackathon 2026**  
+## 🎯 Drone Automation Project
 **Category:** Taskmaster (multi-step engineering workflow automation)  
 **Stack:** Python 3.10+ • Rich/Textual CLI • Stable-Baselines3 (PPO/SAC) • PX4 SITL • Gazebo Harmonic • ROS 2 Jazzy
 
@@ -312,22 +311,6 @@ aeroforge/
 
 ---
 
-## 📈 Current Status (Aug 29, 2026)
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **Core Agent Pipeline** | ✅ Complete | All 5 agents working |
-| **Beautiful CLI** | ✅ Complete | Rich/Textual, interactive mode |
-| **Terminal Visualization** | ✅ Complete | ASCII drone sim demo |
-| **Global `aeroforge` cmd** | ✅ Complete | `/home/mr_nags/.local/bin/aeroforge` |
-| **RL Training (PPO)** | 🟡 Running | 1M steps on GTX 1650 |
-| **RL Policy Integration** | ✅ Ready | Load/eval in Experiment Engineer |
-| **Full Gazebo+PX4** | ⚠️ Blocked | Distrobox driver mismatch |
-| **Documentation** | 🟡 Updating | This README |
-| **Demo Video** | ⏳ Pending | Tomorrow AM |
-
----
-
 ## 🔧 Development Commands
 
 ```bash
@@ -359,8 +342,6 @@ MIT License
 
 ## 🤝 Hackathon Submission
 
-**Built in 3 days for Google All Things Agentic Hackathon 2026**
-
 ### What makes this a winner:
 1. **True Agentic System** - 5 specialized agents with clear roles, not a chatbot
 2. **Real Engineering Problem** - Drone autonomy requires control theory, perception, safety
@@ -374,6 +355,4 @@ MIT License
 
 ---
 
-*Deadline: Aug 30, 2026 12:00 PM IST*  
-*Team: Solo (NIRVAN)*  
-*Contact: nirvanwms@gmail.com*
+*Contact: nagarajsbhat12@gmail.com*
